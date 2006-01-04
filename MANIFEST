@@ -1,0 +1,14 @@
+Build.PL
+Changes
+lib/Class/InsideOut.pm
+LICENSE
+MANIFEST
+MANIFEST.SKIP
+README
+t/01_load.t
+t/02_trivial.t
+t/Object/Trivial.pm
+t/Util.pm
+Todo
+Makefile.PL
+META.yml
