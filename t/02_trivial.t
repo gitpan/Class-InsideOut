@@ -2,6 +2,8 @@ use strict;
 use Test::More;
 use Class::InsideOut ();
 
+$|++; # keep stdout and stderr in order on Win32
+
 plan tests => 12;
 
 #--------------------------------------------------------------------------#

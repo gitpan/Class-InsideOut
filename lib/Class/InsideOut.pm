@@ -1,9 +1,9 @@
 package Class::InsideOut;
 
-$VERSION     = "0.02";
+$VERSION     = "0.03";
 @ISA         = qw ( Exporter );
-@EXPORT      = qw ( CLONE DESTROY );
-@EXPORT_OK   = qw ( property register );
+@EXPORT      = qw ( );
+@EXPORT_OK   = qw ( property register id );
 %EXPORT_TAGS = ( );
     
 use strict;
@@ -14,9 +14,15 @@ use Scalar::Util qw( refaddr weaken );
 my %PROPERTIES_OF;
 my %REGISTRY_OF;
 
+BEGIN { *id = \&Scalar::Util::refaddr; }
+
 sub import {
-    my $package = shift;
-    unshift @_, $package, @Class::InsideOut::EXPORT;
+    my $caller = caller;
+    {
+        no strict 'refs';
+        *{ $caller . "::CLONE"   } = _gen_CLONE( $caller );
+        *{ $caller . "::DESTROY" } = _gen_DESTROY( $caller );
+    }
     goto &Exporter::import;
 }
     
@@ -31,38 +37,52 @@ sub register {
     return $obj;
 }
 
-sub CLONE {
+#--------------------------------------------------------------------------#
+# private functions for implementation
+#--------------------------------------------------------------------------#
+
+sub _gen_CLONE {
     my $class = shift;
-    my $registry = $REGISTRY_OF{ $class };
-    my $properties = $PROPERTIES_OF{ $class };
-    
-    for my $old_id ( keys %$registry ) {  
-       
-        # look under old_id to find the new, cloned reference
-        my $object = $registry->{ $old_id };
-        my $new_id = refaddr $object;
+    return sub {
+        my $registry = $REGISTRY_OF{ $class };
+        my $properties = $PROPERTIES_OF{ $class };
+        
+        for my $old_id ( keys %$registry ) {  
+           
+            # look under old_id to find the new, cloned reference
+            my $object = $registry->{ $old_id };
+            my $new_id = refaddr $object;
 
-        # relocate data for all properties
-        for my $prop ( @$properties ) {
-            $prop->{ $new_id } = $prop->{ $old_id };
-            delete $prop->{ $old_id };
+            # relocate data for all properties
+            for my $prop ( @$properties ) {
+                $prop->{ $new_id } = $prop->{ $old_id };
+                delete $prop->{ $old_id };
+            }
+
+            # update the weak reference to the new, cloned object
+            weaken ( $registry->{ $new_id } = $object );
+            delete $registry->{ $old_id };
         }
-
-        # update the weak reference to the new, cloned object
-        weaken ( $registry->{ $new_id } = $object );
-        delete $registry->{ $old_id };
-    }
-   
-    return;
+       
+        return;
+    };
 }
 
-sub DESTROY {
-    my $obj = shift;
-    my $class = ref $obj;
-    my $obj_id = refaddr $obj;
-    delete $_->{ $obj_id } for @{ $PROPERTIES_OF{ $class } };
-    delete $REGISTRY_OF{ $class }{ $obj_id };
-    return;
+sub _gen_DESTROY {
+    my $class = shift;
+    return sub {
+        my $obj = shift;
+        my $obj_id = refaddr $obj;
+        my $demolish;
+        {
+            no strict 'refs';
+            $demolish = *{ $class . "::DEMOLISH" }{CODE};
+        }
+        $demolish->($obj) if defined $demolish;
+        delete $_->{ $obj_id } for @{ $PROPERTIES_OF{ $class } };
+        delete $REGISTRY_OF{ $class }{ $obj_id };
+        return;
+    };
 }
 
 #--------------------------------------------------------------------------#
@@ -99,7 +119,7 @@ Class::InsideOut - a safe, simple inside-out object construction kit
 
  package My::Class;
  
- use Class::InsideOut qw( property register );
+ use Class::InsideOut qw( property register id );
  use Scalar::Util qw( refaddr );
 
  # declare a lexical property hash with 'my'
@@ -128,7 +148,9 @@ Class::InsideOut - a safe, simple inside-out object construction kit
  
  sub greeting {
    my $self = shift;
-   print "Hello, my name is " . $name { refaddr $self } . "\n";
+   
+   # use 'id' as a mnemonic alias for 'refaddr'
+   return "Hello, my name is " . $name { id $self };
  }
 
 =head1 DESCRIPTION
@@ -136,10 +158,12 @@ Class::InsideOut - a safe, simple inside-out object construction kit
 This is an alpha release for a work in progress. It is a functional but
 incomplete implementation of a simple, safe and streamlined toolkit for
 building inside-out objects.  Unlike most other inside-out object building
-modules already on CPAN, this module aims for minimalism and robustness.  It
-uses no source filters, no attributes, supports foreign inheritance, does not
-leak memory, is overloading-safe, is thread-safe for Perl 5.8 or better and
-should be mod_perl compatible.
+modules already on CPAN, this module aims for minimalism and robustness.  
+
+It uses no source filters, no attributes or CHECK blocks, supports any
+underlying object type including foreign inheritance, does not leak memory, is
+overloading-safe, is thread-safe for Perl 5.8 or better and should be mod_perl
+compatible.
 
 In its current state, it provides the minimal support necessary for safe
 inside-out objects.  All other implementation details, including writing a
@@ -195,6 +219,14 @@ Registers an object for thread-safety.  This should be called as part of a
 constructor on a object blessed into the current package.  Returns the
 object (without modification).
 
+=head2 C<id>
+
+  $name{ id $object } = "Larry";
+
+This is a shorter, mnemonic alias for C<Scalar::Util::refaddr>.  It returns the
+memory address of an object (just like C<refaddr>) as the index to access
+the properties of an inside-out object.
+
 =head2 C<CLONE>
 
 C<CLONE> is automatically exported to provide thread-safety to modules using
@@ -206,8 +238,10 @@ created.  It should never be called directly.
 
 This destructor is automatically exported to modules using C<Class::InsideOut>
 to clean up object property memory usage during object destruction.  It should
-never be called directly.  In the future, it will be enhanced to support a user
-supplied C<DEMOLISH> method for additional, custom destruction actions.
+never be called directly.  C<DESTROY> will call a user-supplied C<DEMOLISH>
+method if one exists to allow for additional, custom destruction actions such
+as closing sockets or database handles.  C<DEMOLISH> is called prior to
+deleting object properties.
 
 =head1 SEE ALSO
 
@@ -218,7 +252,7 @@ supplied C<DEMOLISH> method for additional, custom destruction actions.
 L<Object::InsideOut> -- Currently the most full-featured, robust implementation
 of inside-out objects, but foreign inheritance is handled via delegation.
 Highly recommended if a more full-featured inside-out object builder is
-needed.
+needed.  Array-based mode is faster than hash-based implementations.
 
 =item *
 
@@ -230,7 +264,7 @@ safe and doesn't support foreign inheritance.
 
 L<Class::BuildMethods> -- Generates accessors with encapsulated storage using a
 flyweight inside-out variant. Lexicals properties are hidden; accessors must be
-used everywhere.
+used everywhere. Not thread-safe.
 
 =item *
 
