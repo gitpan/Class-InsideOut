@@ -2,19 +2,20 @@ use strict;
 use Test::More;
 use Class::InsideOut ();
 
-plan tests => 12;
+plan 'no_plan'; # tests => 9;
 
 #--------------------------------------------------------------------------#
 
-my $class = "t::Object::Trivial";
+my $class = "t::Object::Synopsis";
 my ($o, $p);
+my $got;
 
 #--------------------------------------------------------------------------#
 
 require_ok( $class );
 
-is( Class::InsideOut::_property_count( "$class" ), 0,
-    "$class has no properties registered"
+is( Class::InsideOut::_property_count( "$class" ), 1,
+    "$class has 1 properties registered"
 );
 
 is( Class::InsideOut::_object_count( $class ), 0,
@@ -29,21 +30,25 @@ ok( ($p = $class->new()) && $p->isa($class),
     "Creating another $class object"
 );
 
-is( Class::InsideOut::_object_count( "$class" ), 2,
-    "$class has 2 objects registered"
+$o->name( "Larry" );
+is( $o->name(), "Larry",
+    "Setting a name for the first object"
 );
 
-for ( qw( CLONE DESTROY ) ) {
-    ok( $o->can($_), "Object can '$_'" );
-}
+$p->name( "Damian" );
+is( $p->name(), "Damian",
+    "Setting a name for the second object"
+);
+
+isnt( $o->name, $p->name,
+    "Objects have different names"
+);
+
+undef $got; # just in case it's holding a reference
 
 undef $o;
 ok( ! defined $o,
     "Destroying the first object"
-);
-
-is( Class::InsideOut::_object_count( $class ), 1,
-    "$class has 1 object registered"
 );
 
 undef $p;
@@ -51,8 +56,7 @@ ok( ! defined $p,
     "Destroying the second object"
 );
 
-is( Class::InsideOut::_object_count( $class ), 0,
-    "$class has no objects registered"
+ok( ! Class::InsideOut::_leaking_memory( $class ),
+    "$class is not leaking memory"
 );
-
 
