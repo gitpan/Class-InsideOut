@@ -4,8 +4,9 @@ my @available;
 
 BEGIN {
     @available = qw(
-      CLONE
       DESTROY
+      STORABLE_freeze
+      STORABLE_thaw
       property
       register
       id

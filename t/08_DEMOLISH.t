@@ -9,7 +9,7 @@ plan tests => 9;
 #--------------------------------------------------------------------------#
 
 my $class    = "t::Object::Animal";
-my $subclass = "t::Object::Animal::Baboon";
+my $subclass = "t::Object::Animal::Antelope";
 
 my ($o, $p);
 
@@ -36,7 +36,7 @@ ok( ! defined $p,
 );
 
 ok( ! scalar @t::Object::Animal::subclass_errors,
-    "Subclass didn't find inherit superclass DEMOLISH"
+    "Subclass shouldn't inherit superclass DEMOLISH"
 ) or do {
     diag "  DEMOLISH improperly called by $_" 
         for @t::Object::Animal::subclass_errors;
