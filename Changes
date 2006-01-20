@@ -1,6 +1,18 @@
 Revision history for Perl module Class::InsideOut
 
-0.08 in progress
+0.09 Fri Jan 20 14:55:14 EST 2006
+    
+    - added basic accessor generation as an option for property declarations;
+      added aliases "public" and "private" as shortcuts to property options
+      
+    - added per-class default options for properties
+
+    - added support for user-written freeze and thaw hooks
+
+    - documentation updates: typo safety requires strict (Steven Lembark);
+      caching refaddr() to minimize overhead; new features documented 
+
+0.08 Wed Jan 18 10:50:13 EST 2006
 
     - BACKWARDS INCOMPATIBLE CHANGE: property definitions now require a
       label in addition to the property hash

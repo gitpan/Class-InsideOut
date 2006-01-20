@@ -30,6 +30,7 @@ BEGIN {
         "t::Object::Animal::Jackalope" => {
             color => "white",
             speed => "60 mph",
+            points => 13,
             kills => 23,
         },
     );
@@ -37,9 +38,10 @@ BEGIN {
     $prop_count++ for map { keys %$_ } values %custom_prop_for_class;
 }
 
-eval { require Storable };
+# Need Storable 2.04 ( relatively safe STORABLE_freeze support )
+eval { require Storable and Storable->VERSION( 2.04 ) };
 if ( $@ ) {
-    plan skip_all => "Storable not installed",
+    plan skip_all => "Storable >= 2.04 not installed",
 }
 else
 {

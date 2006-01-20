@@ -1,59 +1,39 @@
 TODO list for Perl module Class::InsideOut
 
-- add introspection methods
-- update storable hooks to use new property names
+# Planned todos around core functionality
+
+- ":all" export key, ":std" export key ( qw(id public private register) )
+- mutator filter options and validation handling { filter => \&code }
+- error handling and argument checking throughout
+- add checks for XS weaken and add to documentation
+- accessor style options
+- STORABLE_attach and singleton support (write as Class::InsideOut::Singleton)
+- expand documentation (tutorial? notes on writing Builders)
+- cleanup test objects to use new features like accessor generation
+
+# Possible todos depending on demand
+
+- accessor privacy => "protected" and matching property alias
+- add introspection methods (property list and options?)
 - "evert" method -- dump/reconstruct to a hash  (??)
   ( $hash_ref = $obj->evert; $newobj = Class->evert( $hash_ref ) )
-- storable hooks: pre-freeze user hook
-- storable_attach and singleton support (!?)
-- ":all" export key
-- accessor creation
-- accessor privacy options
-- aliases: 'private', 'public', 'protected'
-- accessor style options
-- mutator filter options and validation handling
-- class-wide default options
-- error handling and argument checking
-- expand documentation (tutorial? notes on writing Builders)
-- add checks for XS weaken and add to documentation
-- pre-clone user hook??
+- pre-clone user hook?? (waiting for someone to say they need it)
 
 #--------------------------------------------------------------------------#
-# Interface brainstorming below
+# interface ideas
 #--------------------------------------------------------------------------#
 
-Need to figure out how to best get the accessor name -- can't use PadWalker
-because that's 5.8 specific.  Ideas:
-
-# cumbersome but similar to Class::Std and Object::InsideOut
-property my %name => { get => 'name', set=>'name' };
-
-# simple and avoids needing a privacy option too, which removes
-# need for aliases for property
-property my %rank,  { public => 'rank' } 
-property my %count, { protected => 'count' }
-
-# clearer but requires additionally denoting degree of privacy
-property my %rank => { accessor => 'rank' } 
-
-# functional style: sub public($\%;$)
-public rank => my %rank, { filter = \&validate };
-protected count => my %count;
-
-# question: should 'property' do the same thing (with/without a 'private')
-# alias?  Would help with introspection and dumping to have names for thingsj
-property name => my %name;
-private color => my %color;
-
+aliases 'private', etc. for property' should use class defaults, then
+provided options, then force "privacy => 'private'"; similar for 'public'
 
 #--------------------------------------------------------------------------#
-# old interface ideas
+# examples
 #--------------------------------------------------------------------------#
 
 use Class::InsideOut qw( property public private register id );
 
 Class::InsideOut::options(
-  accessor_style => 'bimodal', # or eiffel or get_set
+  accessor_style => 'bimodal', # or combo or eiffel or get_set
   get_prefix => 'get_',
   set_prefix => 'set_',
   privacy => 'public',  # create accessors for everything given to properties
@@ -63,22 +43,9 @@ Class::InsideOut::options(
   set_returns => 'self' # or 'value' or 'oldvalue'
 );
 
-Class::InsideOut::property ( my %UID, { privacy => 'readonly' });
+Class::InsideOut::property ( "uid", my %UID, { privacy => 'readonly' });
 
-private my %HEIGHT; # alias for properties with privacy => private
-public my %NAME; # sets privacy => public
-public my %AGE, { filter => \&old_enough }; # dies on error
-
-sub new {
-  my $class = shift;
-  my $self = \do { my $s };
-  bless $self, $class;
-  register $self;
-  return $self;
-}
-
-sub dump {
-  my $self = shift;
-  print "name: ", $NAME{ id $self }, "\n";
-}
+private height => my %HEIGHT; # alias for properties with privacy => private
+public name => my %NAME; # sets privacy => public
+public age => my %AGE, { filter => \&old_enough }; # dies on error
 

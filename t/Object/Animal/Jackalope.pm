@@ -5,16 +5,25 @@ use base qw(
     t::Object::Animal::JackRabbit 
 );
 
-use Class::InsideOut qw( property id );
+use Class::InsideOut qw( private property id );
 
 # superclass is handling new()
 
-property kills => my %kills;
+Class::InsideOut::options( { privacy => 'public' } );
 
-sub kills {
+property kills    => my %kills;
+private  whiskers => my %whiskers; 
+
+use vars qw( $freezings $thawings );
+
+sub STORABLE_freeze_hook {
     my $self = shift;
-    $kills{ refaddr $self } = shift if @_;
-    return $kills{ refaddr $self };
+    $freezings++;
+}
+
+sub STORABLE_thaw_hook {
+    my $self = shift;
+    $thawings++;
 }
 
 1;

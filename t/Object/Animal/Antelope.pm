@@ -2,16 +2,16 @@ package t::Object::Animal::Antelope;
 
 use base 't::Object::Animal';
 
-use Class::InsideOut qw( property id );
+use Class::InsideOut qw( property public id );
 
 # superclass is handling new()
 
-property color => my %color;
+Class::InsideOut::options( { privacy => 'private' } );
 
-sub color {
-    my $self = shift;
-    $color{ refaddr $self } = shift if @_;
-    return $color{ refaddr $self };
-}
+# should override default options above
+property color => my %color, { privacy => 'public' };
+
+# should override default 
+public   points => my %points;
 
 1;

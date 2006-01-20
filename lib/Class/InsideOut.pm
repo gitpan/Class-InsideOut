@@ -1,9 +1,9 @@
 package Class::InsideOut;
 
-$VERSION     = "0.08";
+$VERSION     = "0.09";
 @ISA         = qw ( Exporter );
 @EXPORT      = qw ( );
-@EXPORT_OK   = qw ( property register id );
+@EXPORT_OK   = qw ( id options private property public register );
 %EXPORT_TAGS = ( );
 
 use strict;
@@ -13,11 +13,10 @@ use Scalar::Util qw( refaddr reftype weaken );
 use Class::ISA;
 
 my %PROPERTIES_OF;   # class => [ list of properties ]
-my %PROPNAMES_OF;    # class => [ matching list of names ]
-my %OBJECT_REGISTRY; # refaddr => object reference
+my %PROP_NAMES_OF;   # class => [ matching list of names ]
 my %CLASS_ISA;       # class => [ list of self and @ISA tree ]
-
-BEGIN { *id = \&Scalar::Util::refaddr; }
+my %OPTIONS;         # class => { default accessor options  }
+my %OBJECT_REGISTRY; # refaddr => object reference
 
 sub import {
     my $caller = caller;
@@ -30,10 +29,46 @@ sub import {
     goto &Exporter::import;
 }
 
-sub property($\%) {
-    push @{ $PROPNAMES_OF{ scalar caller } }, $_[0];
-    push @{ $PROPERTIES_OF{ scalar caller } }, $_[1];
+BEGIN { *id = \&Scalar::Util::refaddr; }
+
+sub options {
+    my ($opts) = shift;
+    my $caller = caller;
+    $OPTIONS{ $caller } ||= {};
+    if (defined $opts) {
+        # overwrite current defaults for the calling class
+        $OPTIONS{ $caller } = { %{ $OPTIONS{ $caller } }, %$opts };
+    }
+    return %{ $OPTIONS{ $caller } };
+}
+    
+sub private($\%;$) {
+    $_[2] ||= {};
+    $_[2] = { %{$_[2]}, privacy => 'private' };
+    
+    goto &property;
+}
+
+sub property($\%;$) {
+    my ($label, $hash, $opt) = @_;
+    my $caller = caller;
+    push @{ $PROP_NAMES_OF{ $caller } }, $label;
+    push @{ $PROPERTIES_OF{ $caller } }, $hash;
+    $OPTIONS{ $caller } ||= {};
+    $opt ||= {};
+    my %options = ( %{ $OPTIONS{ $caller } }, %$opt );
+    if ( exists $options{privacy} && $options{privacy} eq 'public' ) {
+        no strict 'refs';
+        *{ $caller . "::" . $label } = _gen_accessor( $hash );
+    }
     return;
+}
+
+sub public($\%;$) {
+    $_[2] ||= {};
+    $_[2] = { %{$_[2]}, privacy => 'public' };
+    
+    goto &property;
 }
 
 sub register {
@@ -76,6 +111,16 @@ sub CLONE {
     }
 }
 
+sub _gen_accessor {
+    my $ref = shift;
+    return sub {
+        my $obj = shift;
+        my $obj_id = refaddr $obj;
+        $ref->{ $obj_id } = shift if (@_);
+        return $ref->{ $obj_id };
+    };
+}
+    
 sub _gen_DESTROY {
     my $class = shift;
     return sub {
@@ -98,7 +143,7 @@ sub _gen_DESTROY {
             delete $_->{ $obj_id } for @{ $PROPERTIES_OF{ $c } };
         }
 
-        # XXX this global registry could be deleted repeatedly 
+        # XXX this global registry could be deleted repeatedly
         # in superclasses -- SUPER::DESTROY shouldn't be called by DEMOLISH
         # it should only call SUPER::DEMOLISH if need be; still,
         # rest of the destructor doesn't need the registry, so early deletion
@@ -114,10 +159,23 @@ sub _gen_STORABLE_freeze {
     return sub {
         my ( $obj, $cloning ) = @_;
 
-        # extract properties to save
-        my %property_vals;
+        # Setup inheritance array
         $CLASS_ISA{ $class } ||= [ Class::ISA::self_and_super_path( $class ) ];
-        for my $c ( @{ $CLASS_ISA{ $class } } ) {
+        my @class_isa = @{ $CLASS_ISA{ $class } };
+
+        # Call STORABLE_freeze_hooks in each class if they exists
+        for my $c ( @class_isa ) {
+            my $hook;
+            {
+                no strict 'refs';
+                $hook = *{ $c . "::STORABLE_freeze_hook" }{CODE};
+            }
+            $hook->($obj) if defined $hook;
+        }
+
+        # Extract properties to save
+        my %property_vals;
+        for my $c ( @class_isa ) {
             next unless exists $PROPERTIES_OF{ $c };
             my $properties = $PROPERTIES_OF{ $c };
             for my $prop ( @$properties ) {
@@ -153,6 +211,10 @@ sub _gen_STORABLE_thaw {
     return sub {
         my ( $obj, $cloning, $serialized, $data ) = @_;
 
+        # Setup inheritance array
+        $CLASS_ISA{ $class } ||= [ Class::ISA::self_and_super_path( $class ) ];
+        my @class_isa = @{ $CLASS_ISA{ $class } };
+
         # restore contents
         my $contents = $data->{contents};
         my $type = reftype $obj;
@@ -161,13 +223,22 @@ sub _gen_STORABLE_thaw {
         elsif ( $type eq 'HASH'   ) { %$obj = %$contents }
 
         # restore properties
-        $CLASS_ISA{ $class } ||= [ Class::ISA::self_and_super_path( $class ) ];
-        for my $c ( @{ $CLASS_ISA{ $class } } ) {
+        for my $c ( @class_isa ) {
             my $properties = $PROPERTIES_OF{ $c };
             my @property_vals = @{ $data->{properties}{ $c } };
             for my $prop ( @$properties ) {
                 $prop->{ refaddr $obj } = shift @property_vals;
             }
+        }
+
+        # Call STORABLE_thaw_hooks in each class if they exists
+        for my $c ( @class_isa ) {
+            my $hook;
+            {
+                no strict 'refs';
+                $hook = *{ $c . "::STORABLE_thaw_hook" }{CODE};
+            }
+            $hook->($obj) if defined $hook;
         }
 
         return;
@@ -182,10 +253,11 @@ sub _object_count {
     return scalar( keys %OBJECT_REGISTRY );
 }
 
-sub _property_count {
+sub _properties {
     my $class = shift;
-    my $properties = $PROPERTIES_OF{ $class };
-    return defined $properties ? scalar @$properties : 0;
+    $PROP_NAMES_OF{ $class } ||= [];
+    my @properties = ( @{ $PROP_NAMES_OF{ $class } } );
+    return @properties;
 }
 
 sub _leaking_memory {
@@ -214,12 +286,21 @@ Class::InsideOut - a safe, simple inside-out object construction kit
 
  package My::Class;
  
- use Class::InsideOut qw( property register id );
+ use Class::InsideOut qw( property public private register id );
  use Scalar::Util qw( refaddr );
  
- # declare a lexical property "name" as a lexical ("my") hash
+ # declare a lexical property "name" as a lexical hash
  property name => my %name;
  
+ # declare a property and generate an accessor for it
+ property color => my %color, { privacy => 'public' };
+ 
+ # alias for property() with privacy => 'public'
+ public height => my %height;
+
+ # alias for property() with privacy => 'private'
+ private weight => my %weight;
+
  sub new {
    my $class = shift;
    my $self = \do {my $scalar};
@@ -250,20 +331,23 @@ Class::InsideOut - a safe, simple inside-out object construction kit
 
 =head1 LIMITATIONS AND ROADMAP
 
-This is an B<alpha release> for a work in progress. It is B<functional but
-incomplete> and should not be used for any production purpose.  It has been
-released to solicit peer review and feedback.
+This is an B<alpha release> for a work in progress. It is functional but
+unfinished and should not be used for any production purpose as the API may
+still evolve.  It has been released to solicit peer review and feedback.
 
-WARNING: Version 0.08 introduces a B<BACKWARDS INCOMPATIBLE> syntax change to
-the C<property> method.  C<property> now requires two arguments, including a
-label for the property.  This label will be used in future versions to better
-support introspection and accessor creation.
+NOTICE: Version 0.08 introduced a B<BACKWARDS INCOMPATIBLE> syntax change to
+the C<property> method.  C<property> currently requires two arguments,
+including a label for the property.  This label is used to support accessor
+creation and introspection.
 
 Serialization with L<Storable> appears to be working but may have unanticipated
-bugs and could use some real-world testing.  Property destruction support for
-various inheritance patterns (e.g.  diamond) is B<experimental> and the API may
-change.  There is minimal argument checking or other error handling.  A future
-version will also add very basic accessor support.
+bugs if an object contains a complicated (i.e. circular) reference structure
+and could use some real-world testing.  
+
+Property destruction support for various inheritance patterns (e.g. diamond)
+is in draft form and the API around DEMOLISH may change slightly.  
+
+There is minimal argument checking or other error handling.  
 
 =head1 DESCRIPTION
 
@@ -275,9 +359,10 @@ any underlying object type including foreign inheritance; does not leak memory;
 is overloading-safe; is thread-safe for Perl 5.8 or better; and should be
 mod_perl compatible.
 
-It provides the minimal support necessary for creating safe inside-out objects.
-All other implementation details, including writing a constructor and managing
-inheritance, are left to the user.
+It provides the minimal support necessary for creating safe inside-out objects
+and generating appropriate accessors.  All other implementation details,
+including writing a constructor and managing inheritance, are left to the user
+to maximize flexibility.
 
 Programmers seeking a more full-featured approach to inside-out objects are
 encouraged to explore L<Object::InsideOut>.  Other implementations are briefly
@@ -289,8 +374,8 @@ Inside-out objects use the blessed reference as an index into lexical data
 structures holding object properties, rather than using the blessed reference
 itself as a data structure.
 
-  $self->{ name }        = "Larry"; # classic, hash-based object
-  $name{ refaddr $self } = "Larry"; # inside-out
+ $self->{ name }        = "Larry"; # classic, hash-based object
+ $name{ refaddr $self } = "Larry"; # inside-out
 
 The inside-out approach offers three major benefits:
 
@@ -304,7 +389,8 @@ from ouside the lexical scope that declared them
 =item *
 
 Making the property name part of a lexical variable rather than a hash-key
-means that typos in the name will be caught as compile-time errors
+means that typos in the name will be caught as compile-time errors (if 
+using L<strict>)
 
 =item *
 
@@ -358,53 +444,104 @@ styles of constructor, destructor and inheritance support.
 
 =head2 Importing C<Class::InsideOut>
 
-  use Class::InsideOut;
+ use Class::InsideOut;
 
 By default, C<Class::InsideOut> imports three critical methods into the
 namespace that uses it: C<DESTROY>, C<STORABLE_freeze> and C<STORABLE_thaw>.
 These methods are intimately tied to correct functioning of the inside-out
-objects. No other functions are imported by default.  Additional functions can
-be imported by including them as arguments with C<use>:
+objects. No other functions are imported by default.  Functions
+can be imported by including them as arguments with C<use>. For example:
 
-  use Class::InsideOut qw( register property id );
+ use Class::InsideOut qw( register property id );
 
 Note that C<DESTROY> and C<STORABLE_*> will still be imported even without an
 explicit request.  This can only be avoided by explicitly doing no importing,
 via C<require> or passing an empty list to C<use>:
 
-  use Class::InsideOut ();
+ use Class::InsideOut ();
 
 There is almost no circumstance under which this is a good idea.  Users
 seeking custom destruction behavior should consult L</"Object destruction"> and
-the description of the C<DEMOLISH> method.
+the description of the C<DEMOLISH> method.  Custom serialization hooks are
+likewise described in L</"Serialization">.
+
+If users do not wish to import functions such as C<register>, C<property>, 
+etc., they may, of course, be called using a fully qualified syntax:
+
+ Class::InsideOut::property name => my %name;
+ Class::InsideOut::register $self;
 
 =head2 Declaring and accessing object properties
 
-Object properties are declared with the C<property> function, which must
-be passed a label and a lexical (i.e. C<my>) hash.
+Object properties are declared with the C<property> function (or its special
+aliases C<public> and C<private>), which must be passed a label and a lexical
+(i.e. C<my>) hash.
 
-  property name => my %name;
-  property age => my %age;
-
-If users do not wish to import C<property>, properties may be declared
-using a fully qualified syntax:
-
-  Class::InsideOut::property name => my %name;
+ property name => my %name;
+ property age => my %age;
 
 Properties are private by default and no accessors are created.  Users are
-free to create accessors of any style.
+free to create accessors of any style.  See L</"Property accessors"> for
+how to have C<Class::InsideOut> automatically generate accessors.
 
 Properties for an object are accessed through an index into the lexical hash
 based on the memory address of the object.  This memory address I<must> be
 obtained via C<Scalar::Util::refaddr>.  The alias C<id> is available for
 brevity.
 
-  $name{ refaddr $self } = "James";
-  $age { id      $self } = 32;
+ $name{ refaddr $self } = "James";
+ $age { id      $self } = 32;
 
-In the future, additional options will be supported to create accessors
-in various styles.
+B<Tip>: since C<refaddr> (or C<id>) are function calls, it may be helpful
+to store the value once at the beginning of a method rather than call it 
+repeatedly throughout.  This is particularly true if it would be called 
+within a loop.  For example:
 
+ property dsn => my %dsn;
+ property dbh => my %dbh;
+  
+ sub dbi_connect {
+     my $self = shift;
+     my $id = refaddr $self; # calculate once and store
+
+     # try up to 20 times
+     for ( 1 .. 20 ) { 
+         $dbh{ $id } = DBI->connect( $dsn{ $id } );
+         return if $dbh{ $id };
+     }
+     die "Couldn't connect to $dbh{ $id }";
+ }
+
+=head2 Property accessors
+
+ property color => my %color, { privacy => 'public' };
+ 
+ $obj->color( "red" );
+ print $obj->color(); # prints "red"
+
+The C<property> method supports an optional hash reference of options.  If the
+I<privacy> option is equal to I<public>, an accessor will be created with the
+same name as the label.  If the accessor is passed an argument, the property
+will be set to the argument.  The accessor always returns the value of the
+property.  Future versions of C<Class::InsideOut> will support additional
+accessor styles.
+
+Default accessor options may be set using the C<options> function and will 
+affect all subsequent calls to C<property>.
+
+C<Class::InsideOut> offers two aliases for C<property> that additionally
+set the privacy property accordingly, overriding the defaults and any options
+provided:
+
+ public  height => my %height;
+ private weight => my %weight;
+
+See the documentation of each for details.
+
+B<Tip>: generated accessors will be slightly slower than a hand-rolled one as
+the generated accessor holds a reference rather than accessing the lexical
+property hash directly.
+     
 =head2 Object construction
 
 C<Class::InsideOut> provides no constructor function as there are many possible
@@ -536,7 +673,18 @@ operation.  (See C<Storable> for details.)
   # preserved relationship between bob2 and alice2
   die unless $bob2->has_friend( $alice ); 
 
-User feedback on serialization needs and limitations is encouraged.
+C<Class::InsideOut> also supports custom freeze and thaw hooks.  When an
+object is frozen, if its class or any superclass provides
+C<STORABLE_freeze_hook> functions, they are called with the object as an
+argument I<prior> to the rest of the freezing process.  This allows for
+custom preparation for freezing, such as writing a cache to disk, closing
+network connections, or disconnecting database handles.
+
+Likewise, when a serialized object is thawed, if its class or any
+superclass provides C<STORABLE_thaw_hook> functions, they are called
+I<after> the object has been thawed with the thawed object as an argument.
+
+User feedback on serialization needs and limitations is welcome.
 
 =head2 Thread-safety
 
@@ -560,39 +708,89 @@ CLONE hook, depending on demand.
 
 Note: C<fork> on Perl for Win32 is emulated using threads since Perl 5.6. (See
 L<perlfork>.)  As Perl 5.6 did not support C<CLONE>, inside-out objects using
-memory addresses (e.g. C<Class::InsideOut> are not fork-safe for Win32 on 
+memory addresses (e.g. C<Class::InsideOut> are not fork-safe for Win32 on
 Perl 5.6.  Win32 Perl 5.8 C<fork> is supported.
 
 =head1 FUNCTIONS
 
-=head2 C<property>
+=head2 C<id> 
 
-  property name => my %name;
-
-Declares an inside-out property.  Two arguments are required.  The first is a
-label for the property; in a future version, this label will be used for
-introspection and generating accessors and thus should be a valid perl
-identifier.  The second argument must be the lexical hash that will be used to
-store data for that property.  Note that the C<my> keyword can be included as
-part of the argument rather than as a separate statement.  No accessor is
-created, but the property will be tracked for memory cleanup during object
-destruction and for proper thread-safety.
-
-=head2 C<register>
-
-  register $object;
-
-Registers an object for thread-safety.  This should be called as part of a
-constructor on a object blessed into the current package.  Returns the
-object (without modification).
-
-=head2 C<id>
-
-  $name{ id $object } = "Larry";
+ $name{ id $object } = "Larry";
 
 This is a shorter, mnemonic alias for C<Scalar::Util::refaddr>.  It returns the
 memory address of an object (just like C<refaddr>) as the index to access
 the properties of an inside-out object.
+
+=head2 C<options>
+
+ Class::InsideOut::options( \%new_options );
+ %current_options = Class::InsideOut::options();
+
+The C<options> function sets default options for use with all subsquent
+C<property> calls for the calling package.  If called without arguments, this
+function will return the options currently in effect.  When called with a hash
+reference of options, these will be joined with the existing defaults,
+overriding any options of the same name.
+
+Valid options include:
+
+=over
+
+=item *
+
+C<privacy>
+
+ property rank => my %rank, { privacy => 'public' };
+
+If the I<privacy> option is equal to I<public>, an accessor will be created
+with the same name as the label.  If the accessor is passed an argument, the
+property will be set to the argument.  The accessor always returns the value of
+the property.
+
+=back
+
+=head2 C<private>
+
+ private weight => my %weight;
+ private haircolor => my %hair_color, { %options };
+
+This is an alias to C<property> that also sets the privacy option to 'private'.
+It will override default options or options passed as an argument.
+
+=head2 C<property>
+
+ property name => my %name;
+ property rank => my %rank, { %options }; 
+
+Declares an inside-out property.  Two arguments are required and a third is
+optional.  The first is a label for the property; this label will be used for
+introspection and generating accessors and thus should be a valid perl
+identifier.  The second argument must be the lexical hash that will be used to
+store data for that property.  Note that the C<my> keyword can be included as
+part of the argument rather than as a separate statement.  The property will be
+tracked for memory cleanup during object destruction and for proper
+thread-safety.
+
+If a third, optional argument is provided, it must be a reference to a hash
+of options that will be applied to the property.  Valid options are the same
+as listed for the C<options> function and will override any 
+default options that have been set.
+
+=head2 C<public>
+
+ public height => my %height;
+ public age => my %age, { %options };
+
+This is an alias to C<property> that also sets the privacy option to 'public'.
+It will override default options or options passed as an argument.
+
+=head2 C<register>
+
+ register $object;
+
+Registers an object for thread-safety.  This should be called as part of a
+constructor on a object blessed into the current package.  Returns the
+object (without modification).
 
 =head1 SEE ALSO
 

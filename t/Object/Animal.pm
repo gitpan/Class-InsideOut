@@ -4,10 +4,18 @@ use strict;
 use Class::InsideOut;
 use Scalar::Util qw( refaddr );
 
-Class::InsideOut::property name => my %name;
-Class::InsideOut::property species => my %species;
+Class::InsideOut::options(
+    {
+        privacy => 'public',
+    }
+);
 
-our $animal_count;
+Class::InsideOut::property( name => my %name );
+Class::InsideOut::property( species => my %species );
+
+# Globals for testing
+
+use vars qw( $animal_count @subclass_errors $freezings $thawings );
 
 sub new {
     my $class = shift;
@@ -19,26 +27,22 @@ sub new {
     return $self;
 }
 
-sub name {
-    my $self = shift;
-    $name{ refaddr $self } = shift if @_;
-    return $name{ refaddr $self };
-}
-
-sub species {
-    my $self = shift;
-    $species{ refaddr $self } = shift if @_;
-    return $species{ refaddr $self };
-}
-
-our @subclass_errors;
-
 sub DEMOLISH {
     my $self = shift;
     $animal_count--;
     if ( ref $self ne "t::Object::Animal" ) {
         push @subclass_errors, ref $self;
     }
+}
+
+sub STORABLE_freeze_hook {
+    my $self = shift;
+    $freezings++;
+}
+
+sub STORABLE_thaw_hook {
+    my $self = shift;
+    $thawings++;
 }
 
 1;

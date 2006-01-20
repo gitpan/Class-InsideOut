@@ -4,13 +4,16 @@ my (@api, @not_api);
 
 BEGIN {
     @api = qw(
-      property
-      register
-      id
-      _property_count
-      _object_count
-      _leaking_memory
-      CLONE
+        options
+        private
+        property
+        public
+        register
+        id
+        _properties
+        _object_count
+        _leaking_memory
+        CLONE
     );
 
     @not_api = qw(
