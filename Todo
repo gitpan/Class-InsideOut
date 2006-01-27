@@ -2,50 +2,60 @@ TODO list for Perl module Class::InsideOut
 
 # Planned todos around core functionality
 
-- ":all" export key, ":std" export key ( qw(id public private register) )
-- mutator filter options and validation handling { filter => \&code }
 - error handling and argument checking throughout
 - add checks for XS weaken and add to documentation
+- cleanup code smells in storable support
 - accessor style options
+- code coverage: storable for non-scalar/array/hash
+- code coverage: storable with non-inside-out superclasses
 - STORABLE_attach and singleton support (write as Class::InsideOut::Singleton)
-- expand documentation (tutorial? notes on writing Builders)
+- write FAQs
+- refactor docs (convert to wikidoc? separate theory from quickstart)
+- expand documentation (cookbook? quick-start? notes on writing Builders)
 - cleanup test objects to use new features like accessor generation
 
 # Possible todos depending on demand
 
+- look into support for cloning tied objects(?) in the blessed hash(?)
 - accessor privacy => "protected" and matching property alias
-- add introspection methods (property list and options?)
+- add public introspection methods (property list and options?)
 - "evert" method -- dump/reconstruct to a hash  (??)
   ( $hash_ref = $obj->evert; $newobj = Class->evert( $hash_ref ) )
 - pre-clone user hook?? (waiting for someone to say they need it)
 
-#--------------------------------------------------------------------------#
-# interface ideas
-#--------------------------------------------------------------------------#
-
-aliases 'private', etc. for property' should use class defaults, then
-provided options, then force "privacy => 'private'"; similar for 'public'
 
 #--------------------------------------------------------------------------#
-# examples
+# Thoughts about property options
 #--------------------------------------------------------------------------#
 
-use Class::InsideOut qw( property public private register id );
+# have to be careful of interrelationship between style and custom prefixes;
+# maybe don't allow custom prefixes at all
 
 Class::InsideOut::options(
-  accessor_style => 'bimodal', # or combo or eiffel or get_set
-  get_prefix => 'get_',
-  set_prefix => 'set_',
+  accessor_style => 'perl', # default
+        # "combined"; "perl" => foo() and foo(x)
+        # "get_set"; "java"  => get_foo() and set_foo(x)
+        # "eiffel"           => foo() and set_foo(x)
+        
+  get_prefix => 'get_', # maybe don't bother (YAGNI)
+  set_prefix => 'set_', # maybe don't bother (YAGNI)
   privacy => 'public',  # create accessors for everything given to properties
                        # or 'readonly' or 'protected' or 'private'
-  filter => \&coderef,  # mutator argument filtered through this
-                       # will catch die message for error
-  set_returns => 'self' # or 'value' or 'oldvalue'
+  set_hook => \&coderef,  # mutator argument filtered through this
+                            # will catch die message for error
+  set_returns => 'self' # or 'newvalue' or 'oldvalue'
 );
 
-Class::InsideOut::property ( "uid", my %UID, { privacy => 'readonly' });
+#--------------------------------------------------------------------------#
+# FAQ ideas
+#--------------------------------------------------------------------------#
 
-private height => my %HEIGHT; # alias for properties with privacy => private
-public name => my %NAME; # sets privacy => public
-public age => my %AGE, { filter => \&old_enough }; # dies on error
+* Security (c.f use perl post)
 
+* advisory encapsulation
+
+#--------------------------------------------------------------------------#
+# Cookbook ideas
+#--------------------------------------------------------------------------#
+
+* Outside-in pattern
