@@ -1,6 +1,6 @@
 package Class::InsideOut;
 
-$VERSION     = "0.11";
+$VERSION     = "0.12";
 @ISA         = qw ( Exporter );
 @EXPORT      = qw ( ); # nothing by default
 @EXPORT_OK   = qw ( id options private property public register );
@@ -12,8 +12,22 @@ $VERSION     = "0.11";
 use strict;
 use Carp;
 use Exporter;
-use Scalar::Util qw( refaddr reftype weaken );
 use Class::ISA;
+use Scalar::Util qw( refaddr reftype blessed );
+
+# Check for XS Scalar::Util with weaken() or warn and fallback
+BEGIN {
+    eval { Scalar::Util->import( "weaken" ) };
+    if ( $@ =~ /\AWeak references/ ) {
+        warn "Scalar::Util::weaken unavailable: "
+           . "Class::InsideOut will not be thread-safe\n";
+        *weaken = sub { shift };
+    }
+}
+
+#--------------------------------------------------------------------------#
+# Class data
+#--------------------------------------------------------------------------#
 
 my %PROP_DATA_FOR;      # class => [ list of property hashrefs ]
 my %PROP_NAMES_FOR;     # class => [ matching list of names ]
@@ -21,6 +35,31 @@ my %PUBLIC_PROPS_FOR;   # class => { prop_name => 1 }
 my %CLASS_ISA;          # class => [ list of self and @ISA tree ]
 my %OPTIONS;            # class => { default accessor options  }
 my %OBJECT_REGISTRY;    # refaddr => weak object reference
+
+#--------------------------------------------------------------------------#
+# option validation parameters
+#--------------------------------------------------------------------------#
+
+# Private but global so related classes can define their own valid options
+# if they need them.  Modify at your own risk.  Done this way so as to 
+# avoid creating class functions to do the same basic thing
+
+use vars qw( %_OPTION_VALIDATION );
+
+sub __coderef { ref shift eq 'CODE' or die "must be a code reference" }
+
+%_OPTION_VALIDATION = (
+    privacy => sub { 
+        my $v = shift; 
+        $v =~ /public|private/ or die "'$v' is not a valid privacy setting"
+    },
+    set_hook =>  \&__coderef,
+    get_hook =>  \&__coderef,
+);
+
+#--------------------------------------------------------------------------#
+# public functions
+#--------------------------------------------------------------------------#
 
 sub import {
     no strict 'refs';
@@ -34,47 +73,39 @@ sub import {
 BEGIN { *id = \&Scalar::Util::refaddr; }
 
 sub options {
+    my $opt = shift;
     my $caller = caller;
-    return %{ $OPTIONS{ $caller } = _merge_options( $caller, shift ) };
+    _check_options( $opt ) if defined $opt;
+    return %{ $OPTIONS{ $caller } = _merge_options( $caller, $opt ) };
 }
  
 sub private($\%;$) {
+    &_check_property;
     $_[2] ||= {};
     $_[2] = { %{$_[2]}, privacy => 'private' };
- 
-    goto &property;
+    goto &_install_property;
 }
 
 sub property($\%;$) {
-    my ($label, $hash, $opt) = @_;
-    my $caller = caller;
-    push @{ $PROP_NAMES_FOR{ $caller } }, $label;
-    push @{ $PROP_DATA_FOR{ $caller } }, $hash;
-    my $options = _merge_options( $caller, $opt );
-    if ( exists $options->{privacy} && $options->{privacy} eq 'public' ) {
-        no strict 'refs';
-        *{ "$caller\::$label" } =
-            ($options->{set_hook} || $options->{get_hook})
-                ? _gen_hook_accessor( $hash, $label, $options->{get_hook},
-                                                 $options->{set_hook} )
-                : _gen_accessor( $hash ) ;
-        $PUBLIC_PROPS_FOR{ $caller }{ $label } = 1;
-    }
-    return;
+    &_check_property;
+    goto &_install_property;
 }
 
 sub public($\%;$) {
+    &_check_property;
     $_[2] ||= {};
     $_[2] = { %{$_[2]}, privacy => 'public' };
- 
-    goto &property;
+    goto &_install_property;
 }
 
 sub register {
     my $obj = shift;
+    croak "Invalid argument '$obj' to register(): must be blessed reference"
+        if ! blessed $obj;
     weaken( $OBJECT_REGISTRY{ refaddr $obj } = $obj );
     return $obj;
 }
+
 
 #--------------------------------------------------------------------------#
 # private functions for implementation
@@ -108,6 +139,37 @@ sub CLONE {
         weaken ( $OBJECT_REGISTRY{ $new_id } = $object );
         delete $OBJECT_REGISTRY{ $old_id };
     }
+}
+
+sub _check_options{
+    my ($opt) = @_;
+    local $Carp::CarpLevel = $Carp::CarpLevel + 1;
+
+    croak "Invalid options argument '$opt': must be a hash reference"
+        if $opt && ref $opt ne 'HASH';
+
+    my @valid_keys = keys %_OPTION_VALIDATION;
+    for my $key ( keys %$opt ) {
+        croak "Invalid option '$key': unknown option"
+            if ! grep { $_ eq $key } @valid_keys;
+        if ( ref $_OPTION_VALIDATION{$key} eq 'CODE' ) {
+            eval { $_OPTION_VALIDATION{$key}->( $opt->{$key} ) };
+            croak "Invalid option '$key': $@" if $@;
+        }
+    }
+    
+    return;
+}
+
+sub _check_property {
+    my ($label, $hash, $opt) = @_;
+    local $Carp::CarpLevel = $Carp::CarpLevel + 1;
+    croak "Invalid property name '$label': must be a perl identifier"
+        if $label !~ /\A[a-z_]\w*\z/;
+    croak "Duplicate property name '$label'"
+        if grep /$label/, @{ $PROP_NAMES_FOR{ caller(1) } }; 
+    _check_options( $opt ) if defined $opt;
+    return;
 }
 
 sub _class_tree {
@@ -274,6 +336,25 @@ sub _gen_STORABLE_thaw {
     };
 }
 
+sub _install_property{
+    my ($label, $hash, $opt) = @_;
+
+    my $caller = caller(0); # we get here via "goto", so caller(0) is right
+    push @{ $PROP_NAMES_FOR{ $caller } }, $label;
+    push @{ $PROP_DATA_FOR{ $caller } }, $hash;
+    my $options = _merge_options( $caller, $opt );
+    if ( exists $options->{privacy} && $options->{privacy} eq 'public' ) {
+        no strict 'refs';
+        *{ "$caller\::$label" } =
+            ($options->{set_hook} || $options->{get_hook})
+                ? _gen_hook_accessor( $hash, $label, $options->{get_hook},
+                                                 $options->{set_hook} )
+                : _gen_accessor( $hash ) ;
+        $PUBLIC_PROPS_FOR{ $caller }{ $label } = 1;
+    }
+    return;
+}
+
 sub _merge_options {
     my ($class, $new_options) = @_;
     my @merged;
@@ -359,24 +440,13 @@ This is an *alpha release* for a work in progress. It is functional but
 unfinished and should not be used for any production purpose.  It has been
 released to solicit peer review and feedback.
 
-NOTICE: Version 0.08 introduced a ~BACKWARDS INCOMPATIBLE~ syntax change to
-the {property} method.  {property} currently requires two arguments,
-including a label for the property.  This label is used to support accessor
-creation and introspection.
-
 Serialization with [Storable] appears to be working but may have unanticipated
 bugs if an object contains a complicated (i.e. circular) reference structure
 and could use some real-world testing.
 
-Property destruction support for various inheritance patterns (e.g. diamond)
-is in draft form.
-
-There is minimal argument checking or other error handling.
-
 I believe API's may have stabilized.  The module will be declared "beta" when
-argument/error checks are added, additional accessor styles are written and
-singleton support for Storable has been added.  Users' feedback would be
-greatly appreciated.
+additional accessor styles are written and singleton support for Storable has
+been added.  Users' feedback would be greatly appreciated.
 
 = DESCRIPTION
 
@@ -524,7 +594,7 @@ within a loop.  For example:
          $dbh{ $id } = DBI->connect( $dsn{ $id } );
          return if $dbh{ $id };
      }
-     die "Couldn't connect to $dbh{ $id }";
+     die "Couldn't connect to $dsn{ $id }";
  }
 
 == Property accessors
@@ -766,10 +836,16 @@ they may interfere with the operation of {Class::InsideOut::CLONE} and leave
 objects in an undefined state.  Future versions may support a user-defined
 CLONE hook, depending on demand.
 
-Note: {fork} on Perl for Win32 is emulated using threads since Perl 5.6. (See
+=== Limitations
+{fork} on Perl for Win32 is emulated using threads since Perl 5.6. (See
 [perlfork].)  As Perl 5.6 did not support {CLONE}, inside-out objects that use 
 memory addresses (e.g. {Class::InsideOut}) are not fork-safe for Win32 on
 Perl 5.6.  Win32 Perl 5.8 {fork} is supported.
+
+The technique for thread-safety requires creating weak references using
+{Scalar::Util::weaken()}, which is implemented in XS.  If the XS-version of
+[Scalar::Util] is not installed, {Class::InsideOut} will issue a warning
+and continue without thread-safety.
 
 = FUNCTIONS
 
@@ -840,7 +916,7 @@ It will override default options or options passed as an argument.
 
 Declares an inside-out property.  Two arguments are required and a third is
 optional.  The first is a label for the property; this label will be used for
-introspection and generating accessors and thus should be a valid perl
+introspection and generating accessors and thus must be a valid perl
 identifier.  The second argument must be the lexical hash that will be used to
 store data for that property.  Note that the {my} keyword can be included as
 part of the argument rather than as a separate statement.  The property will be

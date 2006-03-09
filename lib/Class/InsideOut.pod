@@ -38,24 +38,13 @@ This is an B<alpha release> for a work in progress. It is functional but
 unfinished and should not be used for any production purpose.  It has been
 released to solicit peer review and feedback.
 
-NOTICE: Version 0.08 introduced a I<BACKWARDS INCOMPATIBLE> syntax change to
-the C<<< property >>> method.  C<<< property >>> currently requires two arguments,
-including a label for the property.  This label is used to support accessor
-creation and introspection.
-
 Serialization with L<Storable> appears to be working but may have unanticipated
 bugs if an object contains a complicated (i.e. circular) reference structure
 and could use some real-world testing.
 
-Property destruction support for various inheritance patterns (e.g. diamond)
-is in draft form.
-
-There is minimal argument checking or other error handling.
-
 I believe API's may have stabilized.  The module will be declared "beta" when
-argumentE<sol>error checks are added, additional accessor styles are written and
-singleton support for Storable has been added.  Users' feedback would be
-greatly appreciated.
+additional accessor styles are written and singleton support for Storable has
+been added.  Users' feedback would be greatly appreciated.
 
 =head1 DESCRIPTION
 
@@ -227,7 +216,7 @@ within a loop.  For example:
           $dbh{ $id } = DBI->connect( $dsn{ $id } );
           return if $dbh{ $id };
       }
-      die "Couldn't connect to $dbh{ $id }";
+      die "Couldn't connect to $dsn{ $id }";
   }
 
 =head2 Property accessors
@@ -469,10 +458,17 @@ they may interfere with the operation of C<<< Class::InsideOut::CLONE >>> and le
 objects in an undefined state.  Future versions may support a user-defined
 CLONE hook, depending on demand.
 
-Note: C<<< fork >>> on Perl for Win32 is emulated using threads since Perl 5.6. (See
+=head3 Limitations
+
+C<<< fork >>> on Perl for Win32 is emulated using threads since Perl 5.6. (See
 L<perlfork>.)  As Perl 5.6 did not support C<<< CLONE >>>, inside-out objects that use 
 memory addresses (e.g. C<<< Class::InsideOut >>>) are not fork-safe for Win32 on
 Perl 5.6.  Win32 Perl 5.8 C<<< fork >>> is supported.
+
+The technique for thread-safety requires creating weak references using
+C<<< Scalar::Util::weaken() >>>, which is implemented in XS.  If the XS-version of
+L<Scalar::Util> is not installed, C<<< Class::InsideOut >>> will issue a warning
+and continue without thread-safety.
 
 =head1 FUNCTIONS
 
@@ -561,7 +557,7 @@ It will override default options or options passed as an argument.
 
 Declares an inside-out property.  Two arguments are required and a third is
 optional.  The first is a label for the property; this label will be used for
-introspection and generating accessors and thus should be a valid perl
+introspection and generating accessors and thus must be a valid perl
 identifier.  The second argument must be the lexical hash that will be used to
 store data for that property.  Note that the C<<< my >>> keyword can be included as
 part of the argument rather than as a separate statement.  The property will be
