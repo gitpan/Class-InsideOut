@@ -1,5 +1,16 @@
 Revision history for Perl module Class::InsideOut
 
+0.90_01 Wed May  3 20:47:34 EDT 2006
+
+    - *API CHANGE* renamed serialization hooks to FREEZE and THAW
+    - added support for STORABLE_attach for singletons
+    - improved test coverage
+    - refactored some of the test classes
+    - refactored STORABLE_* code
+    - refactored documentation
+    - added draft (non-working) support for serialization with
+      Data::Dump::Streamer
+
 0.14 Thu Mar 16 23:07:22 EST 2006
 
     - Fixed test bug where thread test wouldn't properly skip for Win32 Perl
