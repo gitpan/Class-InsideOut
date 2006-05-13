@@ -1,6 +1,6 @@
 package Class::InsideOut;
 
-$VERSION     = "0.90_02";
+$VERSION     = "1.00";
 @ISA         = qw ( Exporter );
 @EXPORT      = qw ( ); # nothing by default
 @EXPORT_OK   = qw ( id options private property public register );
@@ -65,8 +65,6 @@ sub import {
     no strict 'refs';
     my $caller = caller;
     *{ "$caller\::DESTROY" } = _gen_DESTROY( $caller );
-    *{ "$caller\::DDS_freeze" } = _gen_DDS_freeze( $caller );
-    *{ "$caller\::Frozen::DDS_thaw" } = _gen_DDS_thaw( $caller );
     # check for ":singleton" and do export attach instead of thaw
     # make ":singleton" an empty tag to Exporter doesn't choke on it
     if ( grep { $_ eq ":singleton" } @_ ) {
@@ -264,71 +262,6 @@ sub _gen_hook_accessor {
     };
 }
  
-sub _gen_DDS_freeze {
-    my $class = shift;
-    return sub {
-        my ( $obj ) = @_;
-
-        # Call STORABLE_freeze_hooks in each class if they exists
-        for my $c ( _class_tree( ref $obj ) ) {
-            my $hook;
-            {
-                no strict 'refs';
-                $hook = *{ "$c\::FREEZE" }{CODE};
-            }
-            $hook->($obj) if defined $hook;
-        }
-
-        # Extract properties to save
-        my $data = _evert( $obj );
-
-        # Construct proxy object of right type
-        my $proxy;
-        
-        for ($data->{type}) {
-            /SCALAR/    ? do { $proxy = \$data } :
-            /ARRAY/     ? do { $proxy = [ $data ] } :
-            /HASH/      ? do { $proxy = { data => $data } } :
-                          do { $proxy = undef };
-        }
-        
-        bless $proxy, "$class\::Frozen";
-
-        # Return DDS proxy and thaw function
-        return $proxy, "$class\::Frozen::DDS_thaw";
-    };
-}
-
-sub _gen_DDS_thaw {
-    my $class = shift;
-    return sub {
-        # $_[0] is alias to proxy object
-
-        # extract data from proxy
-        my $data;
-        for ( reftype $_[0] ) {
-            /SCALAR/    ? do { $data = $$_[0] } :
-            /ARRAY/     ? do { $data = $_[0][0] } :
-            /HASH/      ? do { $data = $_[0]{data} } :
-                          do {} ;
-        }
-
-        # restore contents and rebless
-        my $obj = _revert( $data, $_[0] );
-
-        # Call STORABLE_thaw_hooks in each class if they exists
-        for my $c ( _class_tree( ref $obj ) ) {
-            my $hook;
-            {
-                no strict 'refs';
-                $hook = *{ "$c\::THAW" }{CODE};
-            }
-            $hook->($obj) if defined $hook;
-        }
-    return $obj;
-    };
-}
-
 sub _gen_DESTROY {
     my $class = shift;
     return sub {
@@ -663,7 +596,7 @@ directly.
 
 {Class::InsideOut} provides no constructor method as there are many possible
 ways of constructing an inside-out object. This avoids constraining users to
-any particular object initialization or superclass initialization approach.
+any particular object initialization or superclass initialization methodology. 
 
 By using the memory address of the object as the index for properties, ~any~
 type of reference may be used as the basis for an inside-out object with
@@ -672,7 +605,7 @@ type of reference may be used as the basis for an inside-out object with
  sub new {
    my $class = shift;
  
-   my $self = \( my $scalar );  # anonymous scalar
+   my $self = \( my $scalar );    # anonymous scalar
  # my $self = {};                 # anonymous hash
  # my $self = [];                 # anonymous array
  # open my $self, "<", $filename; # filehandle reference
@@ -685,11 +618,11 @@ function ~must~ be called on the newly created object.
 
 A more advanced technique uses another object, usually a superclass object,
 as the object reference.  See "foreign inheritance" in 
-[Class::InsideOut::Manual::Advanced] for an example.
+[Class::InsideOut::Manual::Advanced].
 
 == Object destruction
 
-{Class::InsideOut} automatically exports a customized {DESTROY} function.
+{Class::InsideOut} automatically exports a special {DESTROY} function.
 This function cleans up object property memory for all declared properties the
 class and for all {Class::InsideOut} based classes in the {@ISA} array to
 avoid memory leaks or data collision.
@@ -726,10 +659,11 @@ or may prefer to walk the entire {@ISA} tree:
    # class specific demolish actions
  
    # DEMOLISH for all parent classes, but only once
-   my @demolishers = map { $_->can("DEMOLISH") }
-                         Class::ISA::super_path( __PACKAGE__ );
-   for my $d ( @demolishers  ) {
-     $d->($self) if $d;
+   my @parents = Class::ISA::super_path( __PACKAGE__ );
+   my %called;
+   for my $p ( @parents  ) {
+     my $demolish = $p->can('DEMOLISH');
+     $demolish->($self) if not $called{ $demolish }++;
    }
  }
 
