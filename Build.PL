@@ -9,9 +9,10 @@ my $class = Module::Build->subclass(
         my $self = shift;
         eval "use Pod::WikiDoc";
         if ( $@ eq '' ) {
-            my $parser = Pod::WikiDoc->new( 
-                { comment_blocks => 1 } 
-            );
+            my $parser = Pod::WikiDoc->new( {
+                comment_blocks => 1, 
+                keywords => { VERSION => $self->dist_version },
+            });
             for my $src ( keys %{ $self->find_pm_files() } ) {
                 (my $tgt = $src) =~ s{\.pm$}{.pod};
                 $parser->filter( {
@@ -60,7 +61,7 @@ my $builder = $class->new(
     module_name         => 'Class::InsideOut',
     dist_author         => 'David A. Golden <dagolden@cpan.org>',
     license             => 'perl',
-    create_readme       => 0,
+    create_readme       => 1,
     create_makefile_pl  => 'traditional',
     requires        => {
         'perl'           => 5.005, # says Perl::MinimumVersion

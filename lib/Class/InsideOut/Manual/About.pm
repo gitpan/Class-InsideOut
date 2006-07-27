@@ -1,7 +1,7 @@
 package Class::InsideOut::Manual::About;
 # Not really a .pm file, but holds wikidoc which will be
 # turned into .pod by the Build.PL
-$VERSION = "1.00";
+$VERSION = "1.01";
 use strict; # make CPANTS happy
 1;
 __END__
@@ -12,6 +12,10 @@ __END__
 
 Class::InsideOut::Manual::About - guide to this and other implementations of the
 inside-out technique
+
+= VERSION
+
+This documentation refers to version %%VERSION%%
 
 = DESCRIPTION
 
@@ -60,23 +64,24 @@ As a result, only a few things are mandatory:
 * {register} must be called on all new objects
 
 All other implementation details, including constructors, initializers and
-class inheritance management are left to the user.  This does requires some
-additional work, but maximizes freedom.  {Class::InsideOut} is intended to
-be a base class providing only fundamental features.  Subclasses of
-{Class::InsideOut} could be written that build upon it to provide particular
-styles of constructor, destructor and inheritance support.
+class inheritance management are left to the user (though a very simple
+constructor is available as a convenience).  This does requires some additional
+work, but maximizes freedom.  {Class::InsideOut} is intended to be a base class
+providing only fundamental features.  Subclasses of {Class::InsideOut} could be
+written that build upon it to provide particular styles of constructor,
+destructor and inheritance support.
 
 == Other modules on CPAN
 
 * [Object::InsideOut] -- This is perhaps the most full-featured, robust
 implementation of inside-out objects currently on CPAN.  It is highly
 recommended if a more full-featured inside-out object builder is needed.
-Its array-based mode is faster than hash-based implementations, but foreign
+Its array-based mode is faster than hash-based implementations, but black-box
 inheritance is handled via delegation, which imposes certain limitations.
 
 * [Class::Std] -- Despite the name, this does not reflect currently known best
 practices for inside-out objects.  Does not provide thread-safety with CLONE
-and doesn't support foreign inheritance.  Has a robust
+and doesn't support black-box inheritance.  Has a robust
 inheritance/initialization system.
 
 * [Class::BuildMethods] -- Generates accessors with encapsulated storage using

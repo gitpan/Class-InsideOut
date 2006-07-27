@@ -1,7 +1,7 @@
 package Class::InsideOut::Manual::Advanced;
 # Not really a .pm file, but holds wikidoc which will be
 # turned into .pod by the Build.PL
-$VERSION = "1.00";
+$VERSION = "1.01";
 use strict; # make CPANTS happy
 1;
 __END__
@@ -11,6 +11,10 @@ __END__
 = NAME
 
 Class::InsideOut::Manual::Advanced - guide to advanced usage
+
+= VERSION
+
+This documentation refers to version %%VERSION%%
 
 = DESCRIPTION
 
@@ -82,7 +86,7 @@ protected property:
 Accessor hooks can be set as a global default with the {options} function,
 though they may still be overridden with options passed to specific properties.
 
-== Foreign inheritance
+== Black-box inheritance
 
 Because inside-out objects built with {Class::InsideOut} can use any type of
 reference for the object, inside-out objects can be built from other objects.
@@ -96,7 +100,7 @@ based on hashes, array, or other types of blessed references.
  
    my $self = IO::File->new( $filename );
  
-   register( bless $self, $class );
+   register( $self, $class );
  }
 
 In the example above, {IO::File} is a superclass.  The object is an
@@ -104,8 +108,8 @@ In the example above, {IO::File} is a superclass.  The object is an
 object can be used directly anywhere an {IO::File} object would be,
 without interfering with any of its own inside-out functionality.
 
-Classes using foreign inheritance should consider providing a {DEMOLISH}
-function that calls the foreign class destructor explicitly.
+Classes using black-box inheritance should consider providing a {DEMOLISH}
+function that calls the black-box class destructor explicitly.
 
 == Serialization
 

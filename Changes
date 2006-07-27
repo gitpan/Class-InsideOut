@@ -1,5 +1,11 @@
 Revision history for Perl module Class::InsideOut
 
+1.01 Thu Jul 27 12:30:54 EDT 2006
+    - register() now handles standard cases with "sufficiently advanced
+      technology" and does the right thing
+    - optional simple "new" constructor added
+    - changed "foreign" inheritance to "black-box" inheritance in Pod
+
 1.00 Fri May 12 21:25:34 EDT 2006
     
     - removed Data::Dump::Streamer support attempts until RT#19060 can
