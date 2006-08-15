@@ -1,6 +1,6 @@
 package Class::InsideOut;
 
-$VERSION     = "1.01";
+$VERSION     = "1.02";
 @ISA         = qw ( Exporter );
 @EXPORT      = qw ( ); # nothing by default
 @EXPORT_OK   = qw ( new id options private property public register );
@@ -222,7 +222,7 @@ sub _check_property {
     croak "Invalid property name '$label': must be a perl identifier"
         if $label !~ /\A[a-z_]\w*\z/;
     croak "Duplicate property name '$label'"
-        if grep /$label/, keys %{ $PROP_DATA_FOR{ caller(1) } }; 
+        if grep { $_ eq $label } keys %{ $PROP_DATA_FOR{ caller(1) } }; 
     _check_options( $opt ) if defined $opt;
     return;
 }
