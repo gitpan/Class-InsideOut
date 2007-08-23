@@ -1,6 +1,6 @@
 package Class::InsideOut;
 
-$VERSION     = '1.07';
+$VERSION     = '1.08';
 @ISA         = qw ( Exporter );
 @EXPORT      = qw ( ); # nothing by default
 @EXPORT_OK   = qw ( new id options private property public readonly register );
@@ -376,8 +376,9 @@ sub _gen_STORABLE_attach {
             return $class->new();
         }
         else {
-            die "Error attaching to $class:\n" .
+            warn "Error attaching to $class:\n" .
                   "Couldn't find STORABLE_attach_hook() or new() in $class\n";
+            return;
         }
     };
 }
@@ -574,7 +575,7 @@ module aims for minimalism and robustness:
 * Supports any underlying object type including black-box inheritance
 * Does not leak memory on object destruction
 * Overloading-safe
-* Thread-safe for Perl 5.8 or better
+* Thread-safe for Perl 5.8.5 or better
 * {mod_perl} compatible
 * Makes no assumption about inheritance or initializer needs
 
@@ -909,42 +910,20 @@ existing test-file that illustrates the bug or desired feature.
 
 David A. Golden (DAGOLDEN)
 
-dagolden@cpan.org
-
-http://dagolden.com/
-
 = COPYRIGHT AND LICENSE
 
 Copyright (c) 2006, 2007 by David A. Golden
 
-This program is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at 
+L<http://www.apache.org/licenses/LICENSE-2.0>
 
-The full text of the license can be found in the LICENSE file included with
-this module.
-
-= DISCLAIMER OF WARRANTY
-
-BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
-FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
-OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
-PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
-EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
-ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
-YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
-NECESSARY SERVICING, REPAIR, OR CORRECTION.
-
-IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
-WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
-REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE
-LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL,
-OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE
-THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
-RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
-FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
-SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
-SUCH DAMAGES.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =end wikidoc
 
