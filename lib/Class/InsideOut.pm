@@ -3,7 +3,7 @@ use strict;
 
 use vars qw/$VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS/;
 
-$VERSION     = '1.09';
+$VERSION     = '1.10';
 @ISA         = qw ( Exporter );
 @EXPORT      = qw ( ); # nothing by default
 @EXPORT_OK   = qw ( new id options private property public readonly register );
@@ -20,9 +20,10 @@ use Class::ISA;
 use Scalar::Util qw( refaddr reftype blessed );
 
 # Check for XS Scalar::Util with weaken() or warn and fallback
+# syntax of error changed in Scalar::Util so we check both versions
 BEGIN {
     eval { Scalar::Util->import( "weaken" ) };
-    if ( $@ =~ /\AWeak references/ ) {
+    if ( $@ =~ /\AWeak references|weaken is only available/ ) {
         warn "Scalar::Util::weaken unavailable: "
            . "Class::InsideOut will not be thread-safe and will leak memory\n";
         *weaken = sub { return @_ };
@@ -78,7 +79,8 @@ sub import {
         *{ "$caller\::STORABLE_freeze" } = _gen_STORABLE_freeze( $caller, 0 );
         *{ "$caller\::STORABLE_thaw" } = _gen_STORABLE_thaw( $caller );
     }
-    goto &Exporter::import;
+    local $Exporter::ExportLevel = $Exporter::ExportLevel + 1;
+    &Exporter::import;
 }
 
 BEGIN { *id = \&Scalar::Util::refaddr; }
@@ -795,6 +797,10 @@ This simplistic constructor is provided as a convenience and is only exported
 on request.  When called as a class method, it returns a blessed anonymous
 scalar.  Arguments will be used to initialize all matching inside-out class
 properties in the {@ISA} tree.  The argument may be a hash or hash reference.
+
+Note: Properties are set directly, not via accessors.  This means {set_hook} 
+functions will not be called.  For more robust argument checking, you will
+need to implement your own constructor.
 
 == {options}
 

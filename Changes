@@ -1,5 +1,16 @@
 Revision history for Perl module Class::InsideOut
 
+1.10 Mon Aug 24 20:44:46 EDT 2009
+
+    Bug fixes:
+    - changed method of calling Exporter::import() to avoid confusing DProf
+    - fixed detection of missing 'weaken' function in newer Scalar::Util
+      (fixes test t/15_no_weaken_fallback.t) (RT#47623)
+
+    Other: 
+    - cleanup: eliminate test warning from bogus superclass in a test class
+    - docs: Noted that set_hooks aren't called by new() (RT#48106)
+
 1.09 Fri Jan  4 18:42:41 EST 2008
 
     - bugfix: allow use of upper or mixed case property accessors 
