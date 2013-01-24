@@ -1,39 +1,50 @@
 ---
-name: Class-InsideOut
-version: 1.10
+abstract: 'a safe, simple inside-out object construction kit'
 author:
   - 'David A. Golden <dagolden@cpan.org>'
-abstract: 'a safe, simple inside-out object construction kit'
-license: apache
-resources:
-  license: http://www.apache.org/licenses/LICENSE-2.0.txt
-requires:
-  Class::ISA: 0
+build_requires:
   Config: 0
-  Exporter: 0
-  Scalar::Util: 1.09
+  DynaLoader: 0
+  File::Find: 0
+  File::Spec: 0
+  File::Temp: 0
+  IO::File: 0
   Test::More: 0.45
-  base: 0
-  perl: 5.005
+  XSLoader: 0
+  threads: 0
+  warnings: 0
 configure_requires:
-  Module::Build: 0.34
-provides:
-  Class::InsideOut:
-    file: lib/Class/InsideOut.pm
-    version: 1.10
-  Class::InsideOut::Manual::About:
-    file: lib/Class/InsideOut/Manual/About.pm
-    version: 1.10
-  Class::InsideOut::Manual::Advanced:
-    file: lib/Class/InsideOut/Manual/Advanced.pm
-    version: 1.10
-generated_by: Module::Build version 0.34
+  ExtUtils::MakeMaker: 6.30
+dynamic_config: 0
+generated_by: 'Dist::Zilla version 4.300029, CPAN::Meta::Converter version 2.120921'
+license: apache
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
+name: Class-InsideOut
 no_index:
   directory:
+    - t
+    - xt
     - examples
-  file:
-    - lib/Class/InsideOut/Manual/About.pm
-    - lib/Class/InsideOut/Manual/Advanced.pm
+    - corpus
+  package:
+    - DB
+provides:
+  Class::InsideOut:
+    file: lib/Class/InsideOut.pm
+    version: 1.11
+requires:
+  Carp: 0
+  Class::ISA: 0
+  Exporter: 0
+  Scalar::Util: 1.09
+  Storable: 0
+  perl: 5.008
+  strict: 0
+  vars: 0
+resources:
+  bugtracker: https://rt.cpan.org/Public/Dist/Display.html?Name=Class-InsideOut
+  homepage: https://metacpan.org/release/Class-InsideOut
+  repository: git://github.com/dagolden/class-insideout.git
+version: 1.11
