@@ -1,7 +1,7 @@
 package Class::InsideOut;
 use strict;
 # ABSTRACT: a safe, simple inside-out object construction kit
-our $VERSION = '1.11'; # VERSION
+our $VERSION = '1.12'; # VERSION
 
 use vars qw/@ISA @EXPORT @EXPORT_OK %EXPORT_TAGS/;
 
@@ -552,13 +552,15 @@ __END__
 
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
 Class::InsideOut - a safe, simple inside-out object construction kit
 
 =head1 VERSION
 
-version 1.11
+version 1.12
 
 =head1 SYNOPSIS
 
@@ -994,7 +996,7 @@ Further documentation revisions and clarification
 =head2 Bugs / Feature Requests
 
 Please report any bugs or feature requests through the issue tracker
-at L<https://rt.cpan.org/Public/Dist/Display.html?Name=Class-InsideOut>.
+at L<https://github.com/dagolden/class-insideout/issues>.
 You will be notified automatically of any progress on your issue.
 
 =head2 Source Code
@@ -1009,6 +1011,20 @@ L<https://github.com/dagolden/class-insideout>
 =head1 AUTHOR
 
 David A. Golden <dagolden@cpan.org>
+
+=head1 CONTRIBUTORS
+
+=over 4
+
+=item *
+
+David Golden <dagolden@cpan.org>
+
+=item *
+
+Karen Etheridge <ether@cpan.org>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 

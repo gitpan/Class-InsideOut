@@ -1,17 +1,19 @@
-# PODNAME: Class::InsideOut::Manual::About
+# PODNAME: Class::InsideOut::Manual::Advanced
 # ABSTRACT: guide to advanced usage
 
 __END__
 
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
-Class::InsideOut::Manual::About - guide to advanced usage
+Class::InsideOut::Manual::Advanced - guide to advanced usage
 
 =head1 VERSION
 
-version 1.11
+version 1.12
 
 =head1 DESCRIPTION
 
@@ -232,6 +234,20 @@ L<Class::InsideOut::Manual::About>
 =head1 AUTHOR
 
 David A. Golden <dagolden@cpan.org>
+
+=head1 CONTRIBUTORS
+
+=over 4
+
+=item *
+
+David Golden <dagolden@cpan.org>
+
+=item *
+
+Karen Etheridge <ether@cpan.org>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 

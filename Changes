@@ -1,5 +1,13 @@
 Revision history for Perl module Class::InsideOut
 
+1.12      2013-04-24 21:02:39 America/New_York
+
+    Docs:
+    - Typos fixed
+
+    Other:
+    - Issue tracker is now GitHub
+
 1.11      2013-01-23 21:33:13 America/New_York
 
     Bug fixes:

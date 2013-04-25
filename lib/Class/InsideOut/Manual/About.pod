@@ -5,13 +5,15 @@ __END__
 
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
 Class::InsideOut::Manual::About - guide to this and other implementations of the inside-out technique
 
 =head1 VERSION
 
-version 1.11
+version 1.12
 
 =head1 DESCRIPTION
 
@@ -63,7 +65,7 @@ the inside-out technique.  All capabilities necessary for robustness should be
 automatic.  Anything that can be optional should be.  The design should not
 introduce new restrictions unrelated to inside-out objects, such as attributes
 and C<<< CHECK >>> blocks that cause problems for C<<< mod_perl >>> or the use of source
-filters for syntatic sugar.
+filters for syntactic sugar.
 
 As a result, only a few things are mandatory:
 
@@ -210,6 +212,20 @@ L<Class::InsideOut::Manual::Advanced>
 =head1 AUTHOR
 
 David A. Golden <dagolden@cpan.org>
+
+=head1 CONTRIBUTORS
+
+=over 4
+
+=item *
+
+David Golden <dagolden@cpan.org>
+
+=item *
+
+Karen Etheridge <ether@cpan.org>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 
