@@ -37,6 +37,9 @@ t/19_storable_singleton.t
 t/20_storable_singleton_error.t
 t/21_optional_new.t
 t/22_readonly.t
+t/23_accessor_hooks_blessed.t
+t/24_accessor_hooks_overloaded.t
+t/25_accessor_hooks_typetiny.t
 t/Object/Animal.pm
 t/Object/Animal/Antelope.pm
 t/Object/Animal/JackRabbit.pm
@@ -46,6 +49,9 @@ t/Object/Foreign.pm
 t/Object/Friends.pm
 t/Object/Hash.pm
 t/Object/Hooked.pm
+t/Object/HookedBlessed.pm
+t/Object/HookedOverloaded.pm
+t/Object/HookedTT.pm
 t/Object/ReadOnly.pm
 t/Object/RegisterClassname.pm
 t/Object/RegisterRef.pm

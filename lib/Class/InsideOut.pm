@@ -1,7 +1,7 @@
 package Class::InsideOut;
 use strict;
 # ABSTRACT: a safe, simple inside-out object construction kit
-our $VERSION = '1.12'; # VERSION
+our $VERSION = '1.13'; # VERSION
 
 use vars qw/@ISA @EXPORT @EXPORT_OK %EXPORT_TAGS/;
 
@@ -51,7 +51,15 @@ my %OBJECT_REGISTRY;    # refaddr => weak object reference
 
 use vars qw( %_OPTION_VALIDATION );
 
-sub __coderef { ref shift eq 'CODE' or die "must be a code reference" }
+sub __coderef {
+    return 1 if reftype($_[0])||"" eq 'CODE';
+    
+    # Avoid loading overload.pm unless we'd have to die otherwise
+    require overload;
+    return 1 if overload::Overloaded($_[0]) && overload::Method($_[0], q[&{}]);
+    
+    die "must be a code reference";
+}
 
 %_OPTION_VALIDATION = (
     privacy => sub { 
@@ -560,7 +568,7 @@ Class::InsideOut - a safe, simple inside-out object construction kit
 
 =head1 VERSION
 
-version 1.12
+version 1.13
 
 =head1 SYNOPSIS
 
@@ -947,6 +955,8 @@ aliased to the property value for the object.  I<The return value of the hook is
 passed through as the return value of the accessor.> See "Customizing Accessors"
 in L<Class::InsideOut::Manual::Advanced> for details.
 
+The hook must be a coderef, including blessed coderefs and overloaded objects.
+
 =head2 C<<< set_hook >>>
 
   public age => my %age, {
@@ -957,6 +967,8 @@ Defines an accessor hook for when values are set. The hook subroutine receives
 the entire argument list.  C<<< $_ >>> is locally aliased to the first argument for
 convenience.  The property receives the value of C<<< $_ >>>. See "Customizing
 Accessors" in L<Class::InsideOut::Manual::Advanced> for details.
+
+The hook must be a coderef, including blessed coderefs and overloaded objects.
 
 =head1 SEE ALSO
 
@@ -1010,7 +1022,7 @@ L<https://github.com/dagolden/class-insideout>
 
 =head1 AUTHOR
 
-David A. Golden <dagolden@cpan.org>
+David Golden <dagolden@cpan.org>
 
 =head1 CONTRIBUTORS
 
@@ -1018,11 +1030,11 @@ David A. Golden <dagolden@cpan.org>
 
 =item *
 
-David Golden <dagolden@cpan.org>
+Karen Etheridge <ether@cpan.org>
 
 =item *
 
-Karen Etheridge <ether@cpan.org>
+Toby Inkster <tonyink@cpan.org>
 
 =back
 

@@ -2,7 +2,7 @@ NAME
     Class::InsideOut - a safe, simple inside-out object construction kit
 
 VERSION
-    version 1.12
+    version 1.13
 
 SYNOPSIS
       package My::Class;
@@ -342,6 +342,9 @@ OPTIONS
     "Customizing Accessors" in Class::InsideOut::Manual::Advanced for
     details.
 
+    The hook must be a coderef, including blessed coderefs and overloaded
+    objects.
+
   "set_hook"
       public age => my %age, {
          set_hook => sub { /^\d+$/ or die "must be an integer" }
@@ -352,6 +355,9 @@ OPTIONS
     argument for convenience. The property receives the value of $_. See
     "Customizing Accessors" in Class::InsideOut::Manual::Advanced for
     details.
+
+    The hook must be a coderef, including blessed coderefs and overloaded
+    objects.
 
 SEE ALSO
     Programmers seeking a more full-featured approach to inside-out objects
@@ -386,12 +392,12 @@ SUPPORT
       git clone git://github.com/dagolden/class-insideout.git
 
 AUTHOR
-    David A. Golden <dagolden@cpan.org>
+    David Golden <dagolden@cpan.org>
 
 CONTRIBUTORS
-    *   David Golden <dagolden@cpan.org>
-
     *   Karen Etheridge <ether@cpan.org>
+
+    *   Toby Inkster <tonyink@cpan.org>
 
 COPYRIGHT AND LICENSE
     This software is Copyright (c) 2006 by David A. Golden.

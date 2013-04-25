@@ -1,7 +1,7 @@
 ---
 abstract: 'a safe, simple inside-out object construction kit'
 author:
-  - 'David A. Golden <dagolden@cpan.org>'
+  - 'David Golden <dagolden@cpan.org>'
 build_requires:
   Config: 0
   DynaLoader: 0
@@ -36,13 +36,14 @@ no_index:
 provides:
   Class::InsideOut:
     file: lib/Class/InsideOut.pm
-    version: 1.12
+    version: 1.13
 requires:
   Carp: 0
   Class::ISA: 0
   Exporter: 0
   Scalar::Util: 1.09
   Storable: 0
+  overload: 0
   perl: 5.008
   strict: 0
   vars: 0
@@ -50,7 +51,7 @@ resources:
   bugtracker: https://github.com/dagolden/class-insideout/issues
   homepage: https://metacpan.org/release/Class-InsideOut
   repository: git://github.com/dagolden/class-insideout.git
-version: 1.12
+version: 1.13
 x_contributors:
-  - 'David Golden <dagolden@cpan.org>'
   - 'Karen Etheridge <ether@cpan.org>'
+  - 'Toby Inkster <tonyink@cpan.org>'

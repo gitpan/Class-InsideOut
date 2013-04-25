@@ -13,7 +13,7 @@ Class::InsideOut::Manual::Advanced - guide to advanced usage
 
 =head1 VERSION
 
-version 1.12
+version 1.13
 
 =head1 DESCRIPTION
 
@@ -233,7 +233,7 @@ L<Class::InsideOut::Manual::About>
 
 =head1 AUTHOR
 
-David A. Golden <dagolden@cpan.org>
+David Golden <dagolden@cpan.org>
 
 =head1 CONTRIBUTORS
 
@@ -241,11 +241,11 @@ David A. Golden <dagolden@cpan.org>
 
 =item *
 
-David Golden <dagolden@cpan.org>
+Karen Etheridge <ether@cpan.org>
 
 =item *
 
-Karen Etheridge <ether@cpan.org>
+Toby Inkster <tonyink@cpan.org>
 
 =back
 

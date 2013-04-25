@@ -26,6 +26,7 @@ my @modules = qw(
   Storable
   Test::More
   XSLoader
+  overload
   perl
   strict
   threads

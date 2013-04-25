@@ -10,7 +10,7 @@ use ExtUtils::MakeMaker 6.30;
 
 my %WriteMakefileArgs = (
   "ABSTRACT" => "a safe, simple inside-out object construction kit",
-  "AUTHOR" => "David A. Golden <dagolden\@cpan.org>",
+  "AUTHOR" => "David Golden <dagolden\@cpan.org>",
   "BUILD_REQUIRES" => {},
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30"
@@ -25,6 +25,7 @@ my %WriteMakefileArgs = (
     "Exporter" => 0,
     "Scalar::Util" => "1.09",
     "Storable" => 0,
+    "overload" => 0,
     "strict" => 0,
     "vars" => 0
   },
@@ -43,7 +44,7 @@ my %WriteMakefileArgs = (
     "threads" => 0,
     "warnings" => 0
   },
-  "VERSION" => "1.12",
+  "VERSION" => "1.13",
   "test" => {
     "TESTS" => "t/*.t"
   }
